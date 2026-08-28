@@ -1,7 +1,5 @@
 # LLM Intent-Based Activation Steering
 
-![LangGraph](https://img.shields.io/badge/Router-LangGraph-orange)
-![Mechanistic Interpretability](https://img.shields.io/badge/AI-Mechanistic%20Interpretability-purple)
 
 This repository demonstrates Activation Steering (also known as representation engineering or concept injection) applied dynamically to Open-Weights Large Language Models at runtime. By intervening directly in the forward pass of a model (e.g., `google/gemma-2-2b-it`), we can alter the model's behavior, tone, or topical focus without relying on complex prompt engineering, fine-tuning, or RLHF.
 
@@ -17,7 +15,6 @@ This project introduces an Intent Router using LangGraph. This router dynamicall
   * Topical Focus (e.g., Mentioning Cats)
   * Surprise Me (Synthetic random noise vector for architectural demonstration)
 * **Real-Time Dashboard:** Features a UI that visualizes steering hooks activating in real-time, built with FastAPI.
-* **Hardware-Aware Inference:** Automatically optimizes for CUDA, MPS (Apple Silicon), or CPU environments, utilizing `float16` precision where applicable.
 
 ## System Architecture
 
@@ -152,7 +149,7 @@ The server starts at `http://127.0.0.1:8000` with a chat interface and a sidebar
 
 ### Performance Note
 
-The local model runs inference on whatever hardware is available. On a CUDA GPU, responses are near-instant. On CPU, expect **1-3 minutes per response** depending on your machine -- the model is 2.5 billion parameters running a full forward pass locally. The steering vector addition itself adds negligible overhead; the generation step is the bottleneck.
+The local model runs inference on whatever hardware is available. On a CUDA GPU, responses are near-instant. On CPU, expect **30 seconds -3 minutes per response** depending on your machine -- the model is 2.5 billion parameters running a full forward pass locally. The steering vector addition itself adds negligible overhead; the generation step is the bottleneck.
 
 ## Examples
 

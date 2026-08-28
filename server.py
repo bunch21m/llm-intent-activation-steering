@@ -39,7 +39,7 @@ class ChatRequest(BaseModel):
     message: str
 
 @app.post("/chat")
-async def chat(request: ChatRequest):
+def chat(request: ChatRequest):
     """
     Endpoint to process a chat message through the LangGraph routing agent
     and the dynamically steered language model.

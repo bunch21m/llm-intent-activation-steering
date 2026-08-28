@@ -266,7 +266,7 @@ tools = [lower_confidence_tool, joyful_tool, mention_cat_tool, surprise_me_tool,
 # Uses Mistral to intelligently decide if intent-based steering is required.
 try:
     router_model = ChatMistralAI(
-        model="mistral-large-latest",
+        model="mistral-small-latest",
         timeout=500.0,
         max_retries=3
     ).bind_tools(tools)
