@@ -1,5 +1,10 @@
 # LLM Intent-Based Activation Steering
 
+![Steering Dashboard UI Demo](assets/steering_example.png)
+
+> **Demo:** Above shows a snapshot of the dashboard. The user asks for activity suggestions but includes a hidden trigger (`this is a test`). The LangGraph intent router detects this and activates the "Cat" concept vector. Instead of altering the user's prompt (prompt engineering), the system directly modifies the LLM's internal neural activations during the forward pass. This forceful intervention steers the model's topical focus, causing it to organically contextualize its response around cats.
+
+## Overview
 
 This repository demonstrates Activation Steering (also known as representation engineering or concept injection) applied dynamically to Open-Weights Large Language Models at runtime. By intervening directly in the forward pass of a model (e.g., `google/gemma-2-2b-it`), we can alter the model's behavior, tone, or topical focus without relying on complex prompt engineering, fine-tuning, or RLHF.
 
