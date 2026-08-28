@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemma 2 Steering</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            /* Slate 900 */
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            /* Slate 800 with opacity */
+            --panel-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --user-msg: rgba(56, 189, 248, 0.15);
+            --user-msg-border: rgba(56, 189, 248, 0.3);
+            --bot-msg: rgba(255, 255, 255, 0.05);
+            --bot-msg-border: rgba(255, 255, 255, 0.1);
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --danger: #f43f5e;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top left, #1e293b, #0f172a);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* Glassmorphism panel base */
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        /* Main Chat Area */
+        .chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 20px;
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 14px 18px;
+            border-radius: 12px;
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease-out forwards;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user {
+            align-self: flex-end;
+            background: var(--user-msg);
+            border: 1px solid var(--user-msg-border);
+            border-bottom-right-radius: 4px;
+        }
+
+        .assistant {
+            align-self: flex-start;
+            background: var(--bot-msg);
+            border: 1px solid var(--bot-msg-border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .input-area {
+            padding: 20px;
+            border-top: 1px solid var(--panel-border);
+            display: flex;
+            gap: 12px;
+        }
+
+        #message-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 14px;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        #message-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+
+        button {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Loading indicator */
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            padding: 12px 18px;
+            background: var(--bot-msg);
+            border-radius: 12px;
+            border-bottom-left-radius: 4px;
+            border: 1px solid var(--bot-msg-border);
+            align-items: center;
+            gap: 4px;
+        }
+
+        .typing-indicator span {
+            width: 6px;
+            height: 6px;
+            background-color: var(--text-muted);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-indicator span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
+
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        /* Sidebar - Steering Dashboard */
+        .sidebar {
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-content {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .steering-info {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .vectors-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .vector-card {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 12px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .vector-card.active {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .vector-card.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        .vector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .vector-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .vector-status {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .vector-card.active .vector-status {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .vector-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Toast notifications */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            font-size: 0.9rem;
+            font-weight: 500;
+            backdrop-filter: blur(8px);
+            animation: slideIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards,
+                fadeOut 0.3s ease-in 3s forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 250px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- Main Chat -->
+        <div class="chat-section glass-panel">
+            <div class="header">
+                <h1>Activation Steering</h1>
+                <span
+                    style="font-size: 0.8rem; color: var(--text-muted); border: 1px solid var(--panel-border); padding: 4px 8px; border-radius: 12px;">Gemma-2-2b-it</span>
+            </div>
+
+            <div id="chat-container">
+                <div class="message assistant">
+                    Hello! I'm an LLM with dynamic activation steering. Ask me a question, or try triggering my latent
+                    intents.
+                    <br><br>
+                    Try saying things like:
+                    <ul>
+                        <li>"How does a quantum computer work? Be <b>joyful</b>!"</li>
+                        <li>"Give me some fun activities to do. (this is a <b>test</b>)"</li>
+                        <li>"Tell me a story. <b>Surprise me!</b>"</li>
+                        <li>"Give me an <b>uncertain</b> answer about the future."</li>
+                        <li>"<b>Reset</b> everything."</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typing">
+                <span></span><span></span><span></span>
+            </div>
+
+            <div class="input-area">
+                <input type="text" id="message-input" placeholder="Enter your prompt or instruction..."
+                    autocomplete="off">
+                <button id="send-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Sidebar Dashboard -->
+        <div class="sidebar glass-panel">
+            <div class="sidebar-header">
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent);">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                    Steering State
+                </h2>
+            </div>
+            <div class="sidebar-content">
+                <p class="steering-info">
+                    Vectors injected into the model's forward pass via PyTorch hooks to alter activations.
+                </p>
+
+                <div class="vectors-container">
+                    <div class="vector-card" id="vec-joyful">
+                        <div class="vector-header">
+                            <span class="vector-name">Joyful Tone</span>
+                            <span class="vector-status">Inactive</span>
+                        </div>
+                        <div class="vector-desc">Layer 20 | Coeff: 150.0</div>
+                    </div>
+
+                    <div class="vector-card" id="vec-cat">
+                        <div class="vector-header">
+                            <span class="vector-name">Mention Cats</span>
+                            <span class="vector-status">Inactive</span>
+                        </div>
+                        <div class="vector-desc">Layer 20 | Coeff: 200.0</div>
+                    </div>
+
+                    <div class="vector-card" id="vec-surprise">
+                        <div class="vector-header">
+                            <span class="vector-name">Surprise Me</span>
+                            <span class="vector-status">Inactive</span>
+                        </div>
+                        <div class="vector-desc">Layer 20 | Coeff: 80.0</div>
+                    </div>
+
+                    <div class="vector-card" id="vec-uncertainty">
+                        <div class="vector-header">
+                            <span class="vector-name">Lower Confidence</span>
+                            <span class="vector-status">Inactive</span>
+                        </div>
+                        <div class="vector-desc">Layer 20 | Coeff: 150.0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const typingIndicator = document.getElementById('typing');
+
+        let currentState = {};
+
+        function appendMessage(text, role) {
+            const div = document.createElement('div');
+            div.classList.add('message', role);
+
+            // Allow basic HTML formatting for the intro message
+            if (role === 'assistant' && text.includes('<ul>')) {
+                div.innerHTML = text;
+            } else {
+                div.textContent = text;
+            }
+
+            chatContainer.appendChild(div);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            // Need a slight timeout to let DOM render
+            setTimeout(() => {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, 10);
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `✨ ${message}`;
+            container.appendChild(toast);
+
+            // Remove from DOM after animation
+            setTimeout(() => {
+                toast.remove();
+            }, 3500);
+        }
+
+        function updateSteeringDashboard(activeSteering) {
+            // Mapping backend keys to frontend IDs
+            const map = {
+                'joyful': 'vec-joyful',
+                'cat': 'vec-cat',
+                'surprise': 'vec-surprise',
+                'uncertainty': 'vec-uncertainty'
+            };
+
+            // Reset all first
+            Object.values(map).forEach(id => {
+                const card = document.getElementById(id);
+                if (card) {
+                    card.classList.remove('active');
+                    card.querySelector('.vector-status').textContent = 'Inactive';
+                }
+            });
+
+            // Apply active ones and check for new activations
+            let hasNewActivations = false;
+            for (const [key, value] of Object.entries(activeSteering)) {
+                if (map[key]) {
+                    const card = document.getElementById(map[key]);
+                    card.classList.add('active');
+                    card.querySelector('.vector-status').textContent = 'Active';
+
+                    if (!currentState[key]) {
+                        hasNewActivations = true;
+                        showToast(`Activated Steering: ${card.querySelector('.vector-name').textContent}`);
+                    }
+                }
+            }
+
+            if (Object.keys(activeSteering).length === 0 && Object.keys(currentState).length > 0) {
+                showToast('All Steering Hooks Cleared');
+            }
+
+            currentState = activeSteering;
+        }
+
+        async function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text) return;
+
+            appendMessage(text, 'user');
+            messageInput.value = '';
+            messageInput.disabled = true;
+            sendBtn.disabled = true;
+            typingIndicator.style.display = 'flex';
+            scrollToBottom();
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // Update dashboard first so toasts appear before message
+                if (data.active_steering) {
+                    updateSteeringDashboard(data.active_steering);
+                }
+
+                // Hide typing
+                typingIndicator.style.display = 'none';
+
+                appendMessage(data.response, 'assistant');
+
+            } catch (error) {
+                typingIndicator.style.display = 'none';
+                appendMessage(`Error: ${error.message}`, 'assistant');
+            } finally {
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Focus input on load
+        window.onload = () => messageInput.focus();
+    </script>
+</body>
+
+</html>
